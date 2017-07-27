@@ -3,8 +3,8 @@
 This Text Similarity Cluster project aims to cluster documents by similarity of the terms found out in the text.
 
 ## Activities
-- [ ] Extract text of PDF and Word files using Apache Tika library.
-- [ ] Count the words in text extracted using .
+- [X] Extract text of PDF and Word files using Apache Tika library.
+- [X] Count the words in text extracted using word2Vec.
 - [ ] Exclude the stopword.
 - [ ] Compare the deeplearning4j, Spark and Mahout library
 - [ ] Choose the best similarity library
