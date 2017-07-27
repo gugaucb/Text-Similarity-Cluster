@@ -69,8 +69,8 @@ public class App {
 
 		Dataset<Row> documentDF = spark.createDataFrame(data, schema);
 		// Learn a mapping from words to Vectors.
-		word2Vec = new Word2Vec().setInputCol("text").setOutputCol("result").setVectorSize(data.size())
-				.setMinCount(0);
+		word2Vec = new Word2Vec().setInputCol("text").setOutputCol("result").setVectorSize(9)
+				.setMinCount(10);
 
 		Word2VecModel model = word2Vec.fit(documentDF);
 		Dataset<Row> result = model.transform(documentDF);
