@@ -78,8 +78,8 @@ public class App {
 
 		Dataset<Row> documentDF = spark.createDataFrame(data, schema);
 		// Learn a mapping from words to Vectors.
-		word2Vec = new Word2Vec().setInputCol("text").setOutputCol("result").setVectorSize(9)
-				.setMinCount(10);
+		word2Vec = new Word2Vec().setInputCol("text").setOutputCol("result").setVectorSize(1)
+				.setMinCount(3);
 
 		model = word2Vec.fit(documentDF);
 		Dataset<Row> result = model.transform(documentDF);
@@ -109,8 +109,10 @@ public class App {
 	private static void testa(){
 		List<Row> dataTemp = new ArrayList<Row>();
 		try {
+			dataTemp.add(RowFactory.create(Arrays.asList(autoDetectParseToStringExample("D:\\Desenvolvimento\\Projetos\\Text-Similarity-Cluster\\teste\\teste.pdf").split(" "))));
 			dataTemp.add(RowFactory.create(Arrays.asList(autoDetectParseToStringExample("D:\\Desenvolvimento\\Projetos\\Text-Similarity-Cluster\\docs_example\\REGRAS-PARA-ELABORACAO-DE-ACOMPANHAMENTO-ESPECIAL.pdf").split(" "))));
 			dataTemp.add(RowFactory.create(Arrays.asList(autoDetectParseToStringExample("D:\\Desenvolvimento\\Projetos\\Text-Similarity-Cluster\\docs_example\\teste.pdf").split(" "))));
+			
 			Dataset<Row> documentDF = spark.createDataFrame(dataTemp, schema);
 			JavaRDD<Vector> countVectors = model.transform(documentDF)
 		              .select("result").toJavaRDD()
@@ -136,7 +138,7 @@ public class App {
 		
 		
 		 // Cluster the data into two classes using KMeans
-	    int numClusters = 2;
+	    int numClusters = 4;
 	    int numIterations = 20;
 	    clusters = KMeans.train(resultRDD.rdd(), numClusters, numIterations);
 
