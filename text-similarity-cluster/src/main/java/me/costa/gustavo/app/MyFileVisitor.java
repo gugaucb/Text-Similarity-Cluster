@@ -12,7 +12,8 @@ import org.xml.sax.SAXException;
 public class MyFileVisitor extends SimpleFileVisitor<Path> {
 	public FileVisitResult visitFile(Path path, BasicFileAttributes fileAttributes){
         System.out.println("Nome do arquivo:" + path.getFileName());
-        try {
+        App.incluirArquivo(path.getFileName().toString(), path.toUri().getPath());
+        try { 
 			App.includeRow(App.autoDetectParseToStringExample(path.toUri().getPath()));
 		} catch (IOException | SAXException | TikaException e) {
 			e.printStackTrace();
