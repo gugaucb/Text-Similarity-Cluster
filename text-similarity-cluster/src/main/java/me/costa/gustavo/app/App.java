@@ -2,6 +2,7 @@ package me.costa.gustavo.app;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -11,6 +12,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -40,6 +42,16 @@ import org.apache.tika.sax.BodyContentHandler;
 import org.xml.sax.SAXException;
 
 public class App {
+	/*private static final int NUM_CLUSTERS = 3;
+	private static final int NUM_INTERACOES = 20;
+	private static final int MIN_COUNT = 15;
+	private static final int TAMANHO_VETOR = 5;
+	*/
+	private static final int NUM_CLUSTERS = 3;
+	private static final int NUM_INTERACOES = 20;
+	private static final int MIN_COUNT = 15;
+	private static final int TAMANHO_VETOR = 1000;
+	
 	private final static Logger LOGGER = Logger.getLogger(App.class.getName());
 	private static List<Row> data = new ArrayList<Row>();
 	private static StructType schema = new StructType(new StructField[] {
@@ -86,8 +98,8 @@ public class App {
 
 		Dataset<Row> documentDF = spark.createDataFrame(data, schema);
 		// Learn a mapping from words to Vectors.
-		word2Vec = new Word2Vec().setInputCol("text").setOutputCol("result").setVectorSize(10)
-				.setMinCount(20);
+		word2Vec = new Word2Vec().setInputCol("text").setOutputCol("result").setVectorSize(TAMANHO_VETOR)
+				.setMinCount(MIN_COUNT);
 
 		model = word2Vec.fit(documentDF);
 		Dataset<Row> result = model.transform(documentDF);
@@ -116,37 +128,58 @@ public class App {
 	}
 	
 	private static void testa(){
+		List<List<String>> listas_predict = initList();
+		
 		
 		for(Map.Entry<String, String> entry : arquivos.entrySet()) {
 			List<Row> dataTemp = new ArrayList<Row>();
-		try {
-			
-			    String nome = entry.getKey();
-			    String path = entry.getValue();
-				//dataTemp.add(RowFactory.create(Arrays.asList(autoDetectParseToStringExample("D:\\Users\\tr300869\\Documents\\docs\\Atendimento\\6 - Termo de Referência - Serviço de Atendimento ao Usuário_0.1.doc").split(" "))));
-				//dataTemp.add(RowFactory.create(Arrays.asList(autoDetectParseToStringExample("D:\\Users\\tr300869\\Documents\\docs\\Demandas\\6 - TR - Solucao de Gestao de Demandas_v1 (2).docx").split(" "))));
-			    dataTemp.add(RowFactory.create(Arrays.asList(autoDetectParseToStringExample(path).split(" "))));
+			try {
 				
-				Dataset<Row> documentDF = spark.createDataFrame(dataTemp, schema);
-				JavaRDD<Vector> countVectors = model.transform(documentDF)
-			              .select("result").toJavaRDD()
-			              .map(new Function<Row, Vector>() {
-			                public Vector call(Row row) throws Exception {
-			                    return Vectors.dense(((DenseVector)row.get(0)).values());
-			                }
-			              });
-				Integer predict = predictKMeans(countVectors).collect().get(0);
-				File diretorio = new File("D:\\Users\\tr300869\\Documents\\docs\\"+predict+"\\");
-				diretorio.mkdirs();
-				
-				Files.copy(new FileInputStream(new File(path)), Paths.get("D:\\Users\\tr300869\\Documents\\docs\\"+predict+"\\"+nome), StandardCopyOption.REPLACE_EXISTING);
-				LOGGER.info("Predict: "+nome+" - "+predictKMeans(countVectors).collect().get(0));
-				LOGGER.info("PredictAll: "+predictKMeans(countVectors).collect());
-			} catch (IOException | SAXException | TikaException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+				    String nome = entry.getKey();
+				    String path = entry.getValue();
+					//dataTemp.add(RowFactory.create(Arrays.asList(autoDetectParseToStringExample("D:\\Users\\tr300869\\Documents\\docs\\Atendimento\\6 - Termo de Referência - Serviço de Atendimento ao Usuário_0.1.doc").split(" "))));
+					//dataTemp.add(RowFactory.create(Arrays.asList(autoDetectParseToStringExample("D:\\Users\\tr300869\\Documents\\docs\\Demandas\\6 - TR - Solucao de Gestao de Demandas_v1 (2).docx").split(" "))));
+				    dataTemp.add(RowFactory.create(Arrays.asList(autoDetectParseToStringExample(path).split(" "))));
+					
+					Dataset<Row> documentDF = spark.createDataFrame(dataTemp, schema);
+					JavaRDD<Vector> countVectors = model.transform(documentDF)
+				              .select("result").toJavaRDD()
+				              .map(new Function<Row, Vector>() {
+				                public Vector call(Row row) throws Exception {
+				                    return Vectors.dense(((DenseVector)row.get(0)).values());
+				                }
+				              });
+					Integer predict = predictKMeans(countVectors).collect().get(0);
+					//copyFileAfterPredict(nome, path, predict);
+					listas_predict.get(predict).add(nome);
+					LOGGER.info("Predict: "+nome+" - "+predictKMeans(countVectors).collect().get(0));
+					LOGGER.info("PredictAll: "+predictKMeans(countVectors).collect());
+				} catch (IOException | SAXException | TikaException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 		}
+		for (int i = 0; i < listas_predict.size(); i++) {
+			List<String> list = listas_predict.get(i);
+			LOGGER.warning("Predictions "+i+": "+Arrays.toString(list.toArray())+" Quantidade: "+list.size());
+			
+		}
+	}
+
+	private static List<List<String>> initList() {
+		List<List<String>> listas_predict = new ArrayList<List<String>>(4);
+		for (int i = 0; i < NUM_CLUSTERS; i++) {
+			listas_predict.add(new ArrayList<String>());
+			
+		}
+		return listas_predict;
+	}
+
+	private static void copyFileAfterPredict(String nome, String path, Integer predict) throws IOException, FileNotFoundException {
+		File diretorio = new File("D:\\Users\\tr300869\\Documents\\docs\\"+predict+"\\");
+		diretorio.mkdirs();
+		
+		Files.copy(new FileInputStream(new File(path)), Paths.get("D:\\Users\\tr300869\\Documents\\docs\\"+predict+"\\"+nome), StandardCopyOption.REPLACE_EXISTING);
 	}
 	
 	
@@ -159,8 +192,8 @@ public class App {
 		
 		
 		 // Cluster the data into two classes using KMeans
-	    int numClusters = 3;
-	    int numIterations = 20;
+	    int numClusters = NUM_CLUSTERS;
+	    int numIterations = NUM_INTERACOES;
 	    clusters = KMeans.train(resultRDD.rdd(), numClusters, numIterations);
 
 	    System.out.println("Cluster centers:");
